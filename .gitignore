@@ -1,0 +1,6 @@
+__pycache__/
+models/
+logs/
+runs/
+raw_train_data/
+value_net_train/
