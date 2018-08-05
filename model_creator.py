@@ -38,35 +38,41 @@ def flat_size_after_conv(conv_module, h,w):
             h,w = size_after_pool(h,w, m.kernel_size, m.dilation, m.stride, m.padding)
     return h*w*last_outch
 
+
+# WHG model will have two inputs: Game screen itself, and delta of of movement
 class WHGModel(nn.Module):
     def __init__(self, output_num=globals.OUTPUT_NUM):
         nn.Module.__init__(self)
         self.conv = nn.Sequential(
-            nn.Conv2d(globals.IMAGE_CHANNELS, 20, kernel_size=(3,3)),
+            # has extra "delta" channel
+            nn.Conv2d(globals.IMAGE_CHANNELS+1, 20, kernel_size=(3,3)),
             nn.MaxPool2d(kernel_size=(2,2)),
             nn.ReLU(),
 
-            nn.Conv2d(10,20, kernel_size=(3,3)),
+            nn.Conv2d(20, 25, kernel_size=(3,3)),
             nn.MaxPool2d(kernel_size=(2,2)),
+            nn.ReLU(),
+
+            nn.Conv2d(25, 30, kernel_size=(3,3)),
             nn.ReLU(),
         )
 
-        self.size_for_fc = flat_size_after_conv(self.conv, globals.IMAGE_HEIGHT, globals.IMAGE_WIDTH)
+        self.fc_input_size = flat_size_after_conv(self.conv, globals.IMAGE_HEIGHT, globals.IMAGE_WIDTH)
 
         self.fc = nn.Sequential(
-            nn.Linear(self.size_for_fc, 500),
+            nn.Linear(self.fc_input_size, 200),
             nn.ReLU(),
 
-            nn.Linear(500, 200),
+            nn.Linear(200, 200),
             nn.ReLU(),
 
             nn.Linear(200, output_num),
-            nn.Sigmoid()
+            #nn.Softmax(), # CrossE loss is used which softmaxes output for us
         )
 
     def forward(self, x):
         x = self.conv(x)
-        x = x.view(-1,self.size_for_fc)
+        x = x.view(-1,self.fc_input_size)
         return self.fc(x)
 
 
@@ -92,7 +98,7 @@ class ScoreModel(nn.Module):
             nn.ReLU(),
         )
 
-        self.size_for_fc = flat_size_after_conv(self.conv, globals.IMAGE_HEIGHT,globals.IMAGE_WIDTH)
+        self.fc_input_size = flat_size_after_conv(self.conv, globals.IMAGE_HEIGHT,globals.IMAGE_WIDTH)
         output_num = 1 if globals.VALUENET_REGRESSOR else 10
 
         self.fc = nn.Sequential(
@@ -112,7 +118,7 @@ class ScoreModel(nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
-        x = x.view(-1, self.size_for_fc)
+        x = x.view(-1, self.fc_input_size)
         return self.fc(x)
 
 def create_score_model():

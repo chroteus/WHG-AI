@@ -11,6 +11,7 @@ class VMInterface:
         self.client = vnc_api.connect(str(ip)+":"+str(display), password=password)
 
     def get_game_screen(self, box=(10,35,605,385), return_im=False):
+        assert self.client.screen, "Call vm.refreshScreen() before trying to get image input!"
         im = self.client.screen.crop(box)
         im = im.resize((globals.IMAGE_WIDTH,globals.IMAGE_HEIGHT), resample=Image.BICUBIC)
 
