@@ -1,5 +1,6 @@
 import sys,os,time
 import globals
+import vm_intf
 
 vm = vm_intf.VMInterface(globals.VNC_IP, display=0, password=globals.VNC_PASS)
 

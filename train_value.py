@@ -74,9 +74,9 @@ train_data = batched_train_data[val_batch_num: ]
 val_data = batched_train_data[0:val_batch_num]
 
 model = model_creator.create_score_model()
-optimizer = optim.Adadelta(model.parameters(), lr=0.2)
+optimizer = optim.Adadelta(model.parameters(), lr=0.1)
 
-criterion = nn.MSELoss() if REGRESSOR else nn.BCEWithLogitsLoss()
+criterion = nn.L1Loss() if REGRESSOR else nn.BCEWithLogitsLoss()
 
 current_epoch = 0
 while True:

@@ -45,29 +45,24 @@ class WHGModel(nn.Module):
         nn.Module.__init__(self)
         self.conv = nn.Sequential(
             # has extra "delta" channel
-            nn.Conv2d(globals.IMAGE_CHANNELS+1, 20, kernel_size=(3,3)),
-            nn.MaxPool2d(kernel_size=(2,2)),
+            nn.Conv2d(globals.IMAGE_CHANNELS+1, 30, kernel_size=(8,8), stride=(4,4)),
             nn.ReLU(),
 
-            nn.Conv2d(20, 25, kernel_size=(3,3)),
-            nn.MaxPool2d(kernel_size=(2,2)),
+            nn.Conv2d(30, 35, kernel_size=(4,4), stride=(2,2)),
             nn.ReLU(),
 
-            nn.Conv2d(25, 30, kernel_size=(3,3)),
+            nn.Conv2d(35, 40, kernel_size=(3,3), stride=(1,1)),
             nn.ReLU(),
         )
 
         self.fc_input_size = flat_size_after_conv(self.conv, globals.IMAGE_HEIGHT, globals.IMAGE_WIDTH)
 
         self.fc = nn.Sequential(
-            nn.Linear(self.fc_input_size, 200),
+            nn.Linear(self.fc_input_size, 500),
             nn.ReLU(),
 
-            nn.Linear(200, 200),
-            nn.ReLU(),
-
-            nn.Linear(200, output_num),
-            #nn.Softmax(), # CrossE loss is used which softmaxes output for us
+            nn.Linear(500, output_num),
+            nn.Softmax(),
         )
 
     def forward(self, x):
@@ -85,16 +80,13 @@ class ScoreModel(nn.Module):
     def __init__(self):
         nn.Module.__init__(self)
         self.conv = nn.Sequential(
-            nn.Conv2d(globals.IMAGE_CHANNELS, 20, kernel_size=(3,3)),
-            nn.MaxPool2d(kernel_size=(2,2)),
+            nn.Conv2d(globals.IMAGE_CHANNELS, 30, kernel_size=(8,8), stride=(4,4)),
             nn.ReLU(),
 
-            nn.Conv2d(20, 25, kernel_size=(3,3)),
-            nn.MaxPool2d(kernel_size=(2,2)),
+            nn.Conv2d(30, 35, kernel_size=(4,4), stride=(2,2)),
             nn.ReLU(),
 
-            nn.Conv2d(25, 30, kernel_size=(3,3)),
-            #nn.MaxPool2d(kernel_size=(2,2)),
+            nn.Conv2d(35, 40, kernel_size=(3,3), stride=(1,1)),
             nn.ReLU(),
         )
 
@@ -102,7 +94,7 @@ class ScoreModel(nn.Module):
         output_num = 1 if globals.VALUENET_REGRESSOR else 10
 
         self.fc = nn.Sequential(
-            nn.Linear(self.size_for_fc, 500),
+            nn.Linear(self.fc_input_size, 500),
             nn.ReLU(),
             nn.Dropout(p=0.5),
 
