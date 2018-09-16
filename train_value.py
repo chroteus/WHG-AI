@@ -1,5 +1,5 @@
 SAVED_EVERY_EPOCHS = 10
-VAL_PERC = 0.1
+VAL_PERC = 0.05
 
 import os, random, time, math, sys
 import numpy as np
@@ -33,10 +33,10 @@ for label_class, str_label in enumerate(DIRS):
 
     for im_fname in os.listdir(root_dir + "/" + str_label):
         im_path = root_dir + "/" + str_label + "/" + im_fname
-        im = Image.open(im_path).convert("RGB")
+        im = Image.open(im_path).convert("L")
         arr = np.array(im.getdata()).astype(np.float32)
         arr *= (1.0/255.0) # normalize to [0,1]
-        arr = torch.Tensor(arr.reshape((1, 3, im.size[1], im.size[0]))) # (1, Ch,H,W)
+        arr = torch.Tensor(arr.reshape((1, 1, im.size[1], im.size[0]))) # (1, Ch,H,W)
 
         if REGRESSOR:
             label = torch.Tensor( ((real_label,),) ) # 1x1 matrix
@@ -51,7 +51,7 @@ for label_class, str_label in enumerate(DIRS):
 random.shuffle(train_data)
 
 ## Put train data in batches
-batch_size = 4
+batch_size = 32
 batched_train_data = []
 for si in range(0, len(train_data), batch_size):
     try:
@@ -74,9 +74,12 @@ train_data = batched_train_data[val_batch_num: ]
 val_data = batched_train_data[0:val_batch_num]
 
 model = model_creator.create_score_model()
+
+#model.load_state_dict(torch.load(globals.DIR + "/ValueNet.model"))
+
 optimizer = optim.Adadelta(model.parameters(), lr=0.1)
 
-criterion = nn.L1Loss() if REGRESSOR else nn.BCEWithLogitsLoss()
+criterion = nn.MSELoss() if REGRESSOR else nn.BCEWithLogitsLoss()
 
 current_epoch = 0
 while True:

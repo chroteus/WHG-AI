@@ -12,7 +12,7 @@ class VMInterface:
 
     def get_game_screen(self, box=(10,35,605,385), return_im=False):
         assert self.client.screen, "Call vm.refreshScreen() before trying to get image input!"
-        im = self.client.screen.crop(box)
+        im = self.client.screen.crop(box).convert("L")
         im = im.resize((globals.IMAGE_WIDTH,globals.IMAGE_HEIGHT), resample=Image.BICUBIC)
 
         if return_im:
@@ -21,7 +21,7 @@ class VMInterface:
             arr = np.array(im.getdata()).astype(np.float32)
             arr *= (1.0/255.0) # normalize
 
-            return arr.reshape((1, 3, im.size[1], im.size[0])) # (1, C,H,W)
+            return arr.reshape((1, 1, im.size[1], im.size[0])) # (1, C,H,W)
 
     def get_deaths_and_level(self, box=(280,10, 590,35)):
         im = self.client.screen.crop(box).convert("L")
@@ -30,6 +30,9 @@ class VMInterface:
         deaths = int(s.split(":")[1])
         return (deaths,level)
 
+    def reset_keys(self):
+        for e in globals.EVENTS:
+            self.client.keyUp(e)
 
     # intercept missing methods and call them from self.client
     def __getattr__(self, name):

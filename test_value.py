@@ -5,6 +5,8 @@ import model_creator
 import globals
 import vm_intf
 import colored
+from functools import reduce
+
 vm = vm_intf.VMInterface(globals.VNC_IP, display=0, password=globals.VNC_PASS)
 model = model_creator.create_score_model()
 model.load_state_dict(torch.load(globals.DIR + "/ValueNet.model"))
@@ -14,14 +16,17 @@ BOXES_NUM = 40
 COLORS_FG = (2, 3, 9, 1)
 
 
-MEAN_N = 10
+MEAN_N = 5
 VALS = [0]*MEAN_N
 
+
+score_abs = 0
 while True:
-    time.sleep(0.1)
+    time.sleep(0.2)
     vm.refreshScreen()
+    game_state = vm.get_game_screen()
     with torch.no_grad():
-        pred_value = model(torch.Tensor(vm.get_game_screen()))
+        pred_value = model(torch.Tensor(game_state))
 
         if globals.VALUENET_REGRESSOR:
             pred_value = float(pred_value)
@@ -30,6 +35,15 @@ while True:
             label = globals.VALUENET_DIRS[max_ind]
             pred_value = float(label)/100
 
+    # img = game_state[0]
+    # r = 0
+    # g = 1
+    # b = 2
+    # #r_and_b = np.bitwise_and(img[r]==1.,img[b]==0.)
+    # r_and_b = np.bitwise_and(img[r]>0.9,img[g]<0.1)
+    # red_x = np.where(r_and_b)[1]
+    # if len(red_x) > 0:
+    #     score_abs = red_x[0]/96
     VALS.append(pred_value)
     curr_pred_value = pred_value
 

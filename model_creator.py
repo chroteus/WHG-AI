@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import globals
+from noisy_linear import NoisyLinear,NoisyFactorizedLinear
 
 def size_after_conv(h,w, kernel_size, dilation=(1,1),stride=(1,1), padding=(0,0)):
     if type(kernel_size) == int:
@@ -44,31 +45,34 @@ class WHGModel(nn.Module):
     def __init__(self, output_num=globals.OUTPUT_NUM):
         nn.Module.__init__(self)
         self.conv = nn.Sequential(
-            # has extra "delta" channel
-            nn.Conv2d(globals.IMAGE_CHANNELS+1, 30, kernel_size=(8,8), stride=(4,4)),
-            nn.ReLU(),
+            nn.Conv2d(globals.IMAGE_CHANNELS+globals.EXTRA_CHANNELS, 30, kernel_size=(8,8), stride=(4,4)),
+            nn.LeakyReLU(),
 
             nn.Conv2d(30, 35, kernel_size=(4,4), stride=(2,2)),
-            nn.ReLU(),
+            nn.LeakyReLU(),
 
             nn.Conv2d(35, 40, kernel_size=(3,3), stride=(1,1)),
-            nn.ReLU(),
+            nn.LeakyReLU(),
         )
 
         self.fc_input_size = flat_size_after_conv(self.conv, globals.IMAGE_HEIGHT, globals.IMAGE_WIDTH)
 
         self.fc = nn.Sequential(
-            nn.Linear(self.fc_input_size, 500),
-            nn.ReLU(),
+            NoisyLinear(self.fc_input_size, 512),
+            nn.LeakyReLU(),
 
-            nn.Linear(500, output_num),
-            nn.Softmax(),
+            #nn.Linear(512, output_num),
+            NoisyLinear(512,output_num),
+            #nn.Softmax(),
         )
 
     def forward(self, x):
         x = self.conv(x)
         x = x.view(-1,self.fc_input_size)
-        return self.fc(x)
+        x = self.fc(x)
+        if not globals.QNET_ENABLED:
+            x = nn.functional.softmax(x)
+        return x
 
 
 def create_model():
@@ -82,12 +86,15 @@ class ScoreModel(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv2d(globals.IMAGE_CHANNELS, 30, kernel_size=(8,8), stride=(4,4)),
             nn.ReLU(),
+            nn.Dropout2d(p=0.2),
 
             nn.Conv2d(30, 35, kernel_size=(4,4), stride=(2,2)),
             nn.ReLU(),
+            nn.Dropout2d(p=0.2),
 
             nn.Conv2d(35, 40, kernel_size=(3,3), stride=(1,1)),
             nn.ReLU(),
+            nn.Dropout2d(p=0.2),
         )
 
         self.fc_input_size = flat_size_after_conv(self.conv, globals.IMAGE_HEIGHT,globals.IMAGE_WIDTH)
@@ -98,11 +105,7 @@ class ScoreModel(nn.Module):
             nn.ReLU(),
             nn.Dropout(p=0.5),
 
-            nn.Linear(500,200),
-            nn.ReLU(),
-            nn.Dropout(p=0.5),
-
-            nn.Linear(200,output_num), # set output to 1 when using regressor
+            nn.Linear(500,output_num), # set output to 1 when using regressor
             nn.Sigmoid()
         )
         # if globals.VALUENET_REGRESSOR:
